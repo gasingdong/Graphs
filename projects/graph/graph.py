@@ -2,6 +2,7 @@
 Simple graph implementation
 """
 from util import Stack, Queue  # These may come in handy
+import collections
 
 
 class Graph:
@@ -46,7 +47,7 @@ class Graph:
             head = q.queue[0]
             for v in self.get_neighbors(head):
                 if status[v] == 'white':
-                    status[v] == 'gray'
+                    status[v] = 'gray'
                     q.enqueue(v)
             status[head] = 'black'
             print(q.dequeue())
@@ -98,7 +99,18 @@ class Graph:
         starting_vertex to destination_vertex in
         breath-first order.
         """
-        pass  # TODO
+        paths = {starting_vertex: [starting_vertex]}
+        q = Queue()
+        q.enqueue(starting_vertex)
+        while q.size():
+            head = q.dequeue()
+            for v in self.get_neighbors(head):
+                if v not in paths:
+                    paths[v] = paths[head] + [v]
+                    if v == destination_vertex:
+                        return paths[v]
+                    q.enqueue(v)
+        return []
 
     def dfs(self, starting_vertex, destination_vertex):
         """
@@ -106,9 +118,8 @@ class Graph:
         starting_vertex to destination_vertex in
         depth-first order.
         """
-        pass  # TODO
 
-    def dfs_recursive(self, starting_vertex):
+    def dfs_recursive(self, starting_vertex, destination_vertex):
         """
         Return a list containing a path from
         starting_vertex to destination_vertex in
@@ -177,7 +188,7 @@ if __name__ == '__main__':
     Valid BFS path:
         [1, 2, 4, 6]
     '''
-    print(graph.bfs(1, 6))
+    # print(graph.bfs(1, 6))
 
     '''
     Valid DFS paths:
