@@ -37,19 +37,15 @@ class Graph:
         Print each vertex in breadth-first order
         beginning from starting_vertex.
         """
-        status = {}
-        for v in self.vertices:
-            status[v] = 'white'
+        visited = {starting_vertex}
         q = Queue()
         q.enqueue(starting_vertex)
-        status[starting_vertex] = 'gray'
         while q.size():
             head = q.queue[0]
             for v in self.get_neighbors(head):
-                if status[v] == 'white':
-                    status[v] = 'gray'
+                if v not in visited:
+                    visited.add(v)
                     q.enqueue(v)
-            status[head] = 'black'
             print(q.dequeue())
 
     def dft(self, starting_vertex):
@@ -57,18 +53,14 @@ class Graph:
         Print each vertex in depth-first order
         beginning from starting_vertex.
         """
-        status = {}
-        for v in self.vertices:
-            status[v] = 'white'
+        visited = {starting_vertex}
         s = Stack()
         s.push(starting_vertex)
-        status[starting_vertex] = 'gray'
         while s.size():
             head = s.pop()
-            status[head] = 'black'
             for v in self.get_neighbors(head):
-                if status[v] == 'white':
-                    status[v] = 'gray'
+                if v not in visited:
+                    visited.add(v)
                     s.push(v)
             print(head)
 
@@ -79,17 +71,14 @@ class Graph:
 
         This should be done using recursion.
         """
-        status = {}
-        for v in self.vertices:
-            status[v] = 'white'
+        visited = {starting_vertex}
 
         def recurse_print(vertex):
-            status[vertex] = 'gray'
             print(vertex)
             for v in self.get_neighbors(vertex):
-                if status[v] == 'white':
+                if v not in visited:
+                    visited.add(v)
                     recurse_print(v)
-            status[vertex] = 'black'
 
         recurse_print(starting_vertex)
 
