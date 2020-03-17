@@ -130,17 +130,15 @@ class Graph:
         """
         paths = {starting_vertex: [starting_vertex]}
 
-        def find_path(start, end, paths):
-            if start == end:
-                return [end]
+        def pathfinding(start, end):
             for v in self.get_neighbors(start):
                 if v not in paths:
                     paths[v] = paths[start] + [v]
-                    find_path(v, end, paths)
-            if end in paths:
-                return paths[end]
+                    if v == end:
+                        yield paths[v]
+                    yield from pathfinding(v, end)
 
-        return find_path(starting_vertex, destination_vertex, paths)
+        return next(pathfinding(starting_vertex, destination_vertex))
 
 
 if __name__ == '__main__':
