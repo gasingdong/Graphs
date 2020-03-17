@@ -19,20 +19,17 @@ def earliest_ancestor(ancestors, starting_node):
 
     paths = {starting_node: [starting_node]}
 
-    def pathfinding(start, data):
+    def pathfinding(start, data, earliest):
         for v in data[start]:
             paths[v] = paths[start] + [v]
+            path_length = len(paths[v])
+            earliest_length = len(paths[earliest]) if earliest > -1 else 0
+            if path_length > earliest_length:
+                earliest = v
+            elif path_length == earliest_length:
+                earliest = v if v < earliest else earliest
             if v in data:
-                pathfinding(v, data)
+                return pathfinding(v, data, earliest)
+        return earliest
 
-    pathfinding(starting_node, graph)
-    max_level = 0
-    earliest = []
-    for path in paths:
-        level = len(paths[path])
-        if level > max_level:
-            earliest = [path]
-            max_level = level
-        elif level == max_level:
-            earliest.append(path)
-    return min(earliest) if earliest else -1
+    return pathfinding(starting_node, graph, -1)
