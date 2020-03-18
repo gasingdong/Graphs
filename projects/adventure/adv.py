@@ -4,14 +4,15 @@ from world import World
 
 import random
 from ast import literal_eval
+from collections import deque
 
 # Load world
 world = World()
 
 
 # You may uncomment the smaller graphs for development and testing purposes.
-map_file = "maps/test_line.txt"
-# map_file = "maps/test_cross.txt"
+# map_file = "maps/test_line.txt"
+map_file = "maps/test_cross.txt"
 # map_file = "maps/test_loop.txt"
 # map_file = "maps/test_loop_fork.txt"
 # map_file = "maps/main_maze.txt"
@@ -32,6 +33,7 @@ visited = {}
 current_room = world.starting_room
 prev_dir = None
 reverse_dir = {'n': 's', 'e': 'w', 'w': 'e', 's': 'n'}
+
 while len(visited) < len(room_graph):
     exits = current_room.get_exits()
     if current_room.id not in visited:
@@ -48,8 +50,36 @@ while len(visited) < len(room_graph):
         new_room = current_room.get_room_in_direction(travel)
         visited[current_room.id][travel] = new_room.id
         prev_dir = (current_room.id, travel)
+        player.travel(travel)
         current_room = new_room
         traversal_path.append(travel)
+    else:
+        paths = {current_room.id: ([current_room.id], [])}
+        q = deque()
+        q.append(current_room)
+        shortest = None
+        while len(q) and not shortest:
+            head = q.popleft()
+            for ex in head.get_exits():
+                if visited[head.id][ex] == '?':
+                    shortest = paths[head.id]
+                    break
+                room = head.get_room_in_direction(ex)
+                if room.id not in paths:
+                    paths[room.id] = (paths[head.id][0] +
+                                      [room.id], paths[head.id][1] + [ex])
+                    q.append(room)
+        if shortest:
+            for d in shortest[1]:
+                print(current_room.id, d)
+                travel = d
+                player.travel(travel)
+                traversal_path.append(travel)
+                prev_dir = (current_room.id, travel)
+                current_room = player.current_room
+        elif len(visited) < len(room_graph):
+            print("WARNING: No solution possible, ending search")
+            break
 
 
 # TRAVERSAL TEST
