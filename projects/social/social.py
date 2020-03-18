@@ -1,6 +1,11 @@
+import random
+from collections import deque
+
+
 class User:
     def __init__(self, name):
         self.name = name
+
 
 class SocialGraph:
     def __init__(self):
@@ -14,7 +19,8 @@ class SocialGraph:
         """
         if user_id == friend_id:
             print("WARNING: You cannot be friends with yourself")
-        elif friend_id in self.friendships[user_id] or user_id in self.friendships[friend_id]:
+        elif (friend_id in self.friendships[user_id]
+              or user_id in self.friendships[friend_id]):
             print("WARNING: Friendship already exists")
         else:
             self.friendships[user_id].add(friend_id)
@@ -24,7 +30,8 @@ class SocialGraph:
         """
         Create a new user with a sequential integer ID
         """
-        self.last_id += 1  # automatically increment the ID to assign the new user
+        # automatically increment the ID to assign the new user
+        self.last_id += 1
         self.users[self.last_id] = User(name)
         self.friendships[self.last_id] = set()
 
@@ -36,17 +43,30 @@ class SocialGraph:
         Creates that number of users and a randomly distributed friendships
         between those users.
 
-        The number of users must be greater than the average number of friendships.
+        The number of users must be greater than the average number of
+        friendships.
         """
         # Reset graph
         self.last_id = 0
         self.users = {}
         self.friendships = {}
         # !!!! IMPLEMENT ME
-
+        if num_users <= avg_friendships:
+            print("WARNING: Attempted to populate graph while number of \
+                users is not more than average number of friendships")
+            return
         # Add users
-
+        for n in range(num_users):
+            self.add_user("")
         # Create friendships
+        possible_friendships = []
+        for user_id in range(1, num_users):
+            for friend_id in range(user_id + 1, num_users + 1):
+                possible_friendships.append((user_id, friend_id))
+        friendships = random.sample(
+            possible_friendships, avg_friendships * num_users // 2)
+        for friends in friendships:
+            self.add_friendship(friends[0], friends[1])
 
     def get_all_social_paths(self, user_id):
         """
@@ -57,8 +77,17 @@ class SocialGraph:
 
         The key is the friend's ID and the value is the path.
         """
-        visited = {}  # Note that this is a dictionary, not a set
+        visited = {user_id: [user_id]
+                   }  # Note that this is a dictionary, not a set
         # !!!! IMPLEMENT ME
+        q = deque()
+        q.append(user_id)
+        while len(q):
+            head = q.pop()
+            for v in self.friendships[head]:
+                if v not in visited and v != user_id:
+                    visited[v] = visited[head] + [v]
+                    q.append(v)
         return visited
 
 
