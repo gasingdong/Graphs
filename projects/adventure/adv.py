@@ -59,19 +59,24 @@ def init_db(rooms, db):
 db_paths = {}
 
 with shelve.open('db') as db:
-    if 'paths' not in db or len(db['paths']) < len(world.rooms):
+    if 'paths' not in db or len(db['paths']) != len(world.rooms):
         print("Initializing database...")
         init_db(world.rooms, db)
     db_paths = db['paths']
 
 
 def get_nearest_neighbor(current_room_id, paths, visited, greed=1):
-    candidates = []
+    candidates = [[] for _ in range(len(paths))]
     for room_id in [_ for _ in paths if _ != current_room_id]:
         if room_id not in visited:
-            candidates.append((room_id, len(paths[room_id])))
-    candidates.sort(key=(lambda x: x[1]))
-    nearest_neighbor = random.choice(candidates[:greed])[0]
+            length = len(paths[room_id])
+            candidates[length - 2].append(room_id)
+    chosen = []
+    index = 0
+    while len(chosen) < greed:
+        chosen = chosen + candidates[index]
+        index += 1
+    nearest_neighbor = random.choice(chosen)
     return nearest_neighbor
 
 
@@ -85,11 +90,12 @@ def add_directions_from_path(rooms, path, traversal):
                 traversal.append(ex)
 
 
-trials = 10000
-greed = 2
+trials = 100
+greed = 1
 shortest_path = None
 
-for _ in range(trials):
+for trial in range(trials):
+    # print(f"Starting trial {trial}...")
     current_room_id = world.starting_room.id
     current_path = [current_room_id]
     visited = {current_room_id}
@@ -115,7 +121,7 @@ for _ in range(trials):
 
 # Turn path into list of directions
 add_directions_from_path(world.rooms, shortest_path, traversal_path)
-print(traversal_path)
+# print(traversal_path)
 
 # TRAVERSAL TEST
 visited_rooms = set()
