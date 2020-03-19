@@ -37,7 +37,7 @@ def init_db(rooms, db):
     size = len(world.rooms)
     paths = {}
     for start in range(size):
-        print(start)
+        print(f"{size - start}...")
         start_room = world.rooms[start]
         for dest in range(size):
             dest_room = world.rooms[dest]
@@ -56,13 +56,13 @@ def init_db(rooms, db):
     db['paths'] = paths
 
 
-all_paths = {}
+db_paths = {}
 
 with shelve.open('db') as db:
     if 'paths' not in db or len(db['paths']) < len(world.rooms):
         print("Initializing database...")
         init_db(world.rooms, db)
-    all_paths = db['paths']
+    db_paths = db['paths']
 
 trials = 100
 shortest_traversal = None
@@ -75,7 +75,7 @@ for _ in range(trials):
     while len(visited) < len(room_graph):
         nearest_neighbor = None
         current_shortest = None
-        current_dict = all_paths[current_room]
+        current_dict = db_paths[current_room]
         for room_id in current_dict:
             if room_id not in visited:
                 if (room_id != current_room and
@@ -97,7 +97,7 @@ for _ in range(trials):
     for i in range(len(tsp) - 1):
         current_room = tsp[i]
         next_room = tsp[i + 1]
-        shortest_path = all_paths[current_room][next_room][1:]
+        shortest_path = db_paths[current_room][next_room][1:]
         full_path = full_path + shortest_path
 
     for i in range(len(full_path) - 1):
