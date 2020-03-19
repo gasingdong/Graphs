@@ -4,6 +4,7 @@ from world import World
 
 import random
 import math
+import shelve
 from ast import literal_eval
 from collections import deque
 
@@ -15,8 +16,8 @@ world = World()
 # map_file = "maps/test_line.txt"
 # map_file = "maps/test_cross.txt"
 # map_file = "maps/test_loop.txt"
-# map_file = "maps/test_loop_fork.txt"
-map_file = "maps/main_maze.txt"
+map_file = "maps/test_loop_fork.txt"
+# map_file = "maps/main_maze.txt"
 
 # Loads the map into a dictionary
 room_graph = literal_eval(open(map_file, "r").read())
@@ -31,121 +32,86 @@ player = Player(world.starting_room)
 # traversal_path = ['n', 'n']
 traversal_path = []
 
-dist_mat = [[0] * len(world.rooms) for _ in range(len(world.rooms))]
+
+def init_db(rooms, db):
+    size = len(world.rooms)
+    paths = {}
+    for start in range(size):
+        print(start)
+        start_room = world.rooms[start]
+        for dest in range(size):
+            dest_room = world.rooms[dest]
+            room_paths = {start_room.id: [start_room.id]}
+            q = deque()
+            q.append(start_room)
+            while len(q):
+                head = q.popleft()
+                for ex in head.get_exits():
+                    new_room = head.get_room_in_direction(ex)
+                    if new_room.id not in room_paths:
+                        room_paths[new_room.id] = room_paths[head.id] + \
+                            [new_room.id]
+                        q.append(new_room)
+            paths[start] = room_paths
+    db['paths'] = paths
+
+
 all_paths = {}
 
-for start in range(len(world.rooms)):
-    print("start", start)
-    start_room = world.rooms[start]
-    for dest in range(len(world.rooms)):
-        dest_room = world.rooms[dest]
-        paths = {start_room.id: [start_room.id]}
-        q = deque()
-        q.append(start_room)
-        while len(q):
-            head = q.popleft()
-            for ex in head.get_exits():
-                new_room = head.get_room_in_direction(ex)
-                if new_room.id not in paths:
-                    paths[new_room.id] = paths[head.id] + [new_room.id]
-                    q.append(new_room)
-        dist = len(paths[dest]) - 1
-        dist_mat[start][dest] = dist
-        dist_mat[dest][start] = dist
-        all_paths[start] = paths
+with shelve.open('db') as db:
+    if 'paths' not in db or len(db['paths']) < len(world.rooms):
+        print("Initializing database...")
+        init_db(world.rooms, db)
+    all_paths = db['paths']
 
-current_room = world.starting_room.id
-tsp = [current_room]
-visited = {current_room}
+trials = 100
+shortest_traversal = None
+for _ in range(trials):
+    temp_traversal = []
+    current_room = world.starting_room.id
+    tsp = [current_room]
+    visited = {current_room}
 
-while len(visited) < len(room_graph):
-    nearest_neighbor = None
-    current_shortest = None
-    current_dict = all_paths[current_room]
-    for room_id in current_dict:
-        if room_id not in visited:
-            if (room_id != current_room and
-                (not current_shortest or
-                 (len(current_dict[room_id]) < current_shortest))):
-                current_shortest = len(current_dict[room_id])
-                nearest_neighbor = room_id
-    tsp.append(nearest_neighbor)
-    visited.add(nearest_neighbor)
-    current_room = nearest_neighbor
+    while len(visited) < len(room_graph):
+        nearest_neighbor = None
+        current_shortest = None
+        current_dict = all_paths[current_room]
+        for room_id in current_dict:
+            if room_id not in visited:
+                if (room_id != current_room and
+                    (not current_shortest or
+                     (len(current_dict[room_id]) <= current_shortest))):
+                    if len(current_dict[room_id]) == current_shortest:
+                        if random.randint(0, 1) == 1:
+                            current_shortest = len(current_dict[room_id])
+                            nearest_neighbor = room_id
+                    else:
+                        current_shortest = len(current_dict[room_id])
+                        nearest_neighbor = room_id
+        tsp.append(nearest_neighbor)
+        visited.add(nearest_neighbor)
+        current_room = nearest_neighbor
 
-print(tsp)
-full_path = [0]
+    full_path = [0]
 
-for i in range(len(tsp) - 1):
-    current_room = tsp[i]
-    next_room = tsp[i + 1]
-    shortest_path = all_paths[current_room][next_room][1:]
-    full_path = full_path + shortest_path
+    for i in range(len(tsp) - 1):
+        current_room = tsp[i]
+        next_room = tsp[i + 1]
+        shortest_path = all_paths[current_room][next_room][1:]
+        full_path = full_path + shortest_path
 
-for i in range(len(full_path) - 1):
-    current_room = world.rooms[full_path[i]]
-    next_room_id = full_path[i + 1]
-    for ex in current_room.get_exits():
-        room = current_room.get_room_in_direction(ex)
-        if room and room.id == next_room_id:
-            traversal_path.append(ex)
+    for i in range(len(full_path) - 1):
+        current_room = world.rooms[full_path[i]]
+        next_room_id = full_path[i + 1]
+        for ex in current_room.get_exits():
+            room = current_room.get_room_in_direction(ex)
+            if room and room.id == next_room_id:
+                temp_traversal.append(ex)
+    if not shortest_traversal or len(temp_traversal) < len(shortest_traversal):
+        shortest_traversal = temp_traversal
 
-print(full_path)
+traversal_path = shortest_traversal
 print(traversal_path)
-
-
-# visited = {}
-# current_room = world.starting_room
-# prev_dir = None
-# reverse_dir = {'n': 's', 'e': 'w', 'w': 'e', 's': 'n'}
-
-# while len(visited) < len(room_graph):
-#     exits = current_room.get_exits()
-#     if current_room.id not in visited:
-#         new_entry = {}
-#         for ex in exits:
-#             new_entry[ex] = '?'
-#         visited[current_room.id] = new_entry
-#     if (prev_dir
-#       and visited[current_room.id][reverse_dir[prev_dir[1]]] == '?'):
-#         visited[current_room.id][reverse_dir[prev_dir[1]]] = prev_dir[0]
-#     unexplored_exits = [
-#         ex for ex in exits if visited[current_room.id][ex] == '?']
-#     if unexplored_exits:
-#         travel = random.choice(unexplored_exits)
-#         new_room = current_room.get_room_in_direction(travel)
-#         visited[current_room.id][travel] = new_room.id
-#         prev_dir = (current_room.id, travel)
-#         player.travel(travel)
-#         current_room = new_room
-#         traversal_path.append(travel)
-#     else:
-#         paths = {current_room.id: ([current_room.id], [])}
-#         q = deque()
-#         q.append(current_room)
-#         shortest = None
-#         while len(q) and not shortest:
-#             head = q.popleft()
-#             for ex in head.get_exits():
-#                 if visited[head.id][ex] == '?':
-#                     shortest = paths[head.id]
-#                     break
-#                 room = head.get_room_in_direction(ex)
-#                 if room.id not in paths:
-#                     paths[room.id] = (paths[head.id][0] +
-#                                       [room.id], paths[head.id][1] + [ex])
-#                     q.append(room)
-#         if shortest:
-#             for d in shortest[1]:
-#                 travel = d
-#                 player.travel(travel)
-#                 traversal_path.append(travel)
-#                 prev_dir = (current_room.id, travel)
-#                 current_room = player.current_room
-#         elif len(visited) < len(room_graph):
-#             print("WARNING: No solution possible, ending search")
-#             break
-
 
 # TRAVERSAL TEST
 visited_rooms = set()
