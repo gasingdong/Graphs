@@ -73,7 +73,7 @@ def get_nearest_neighbor(current_room_id, paths, visited, greed=1):
             candidates[length - 2].append(room_id)
     chosen = []
     index = 0
-    while len(chosen) < greed:
+    while len(chosen) < greed and index < len(candidates):
         chosen = chosen + candidates[index]
         index += 1
     nearest_neighbor = random.choice(chosen)
@@ -90,7 +90,24 @@ def add_directions_from_path(rooms, path, traversal):
                 traversal.append(ex)
 
 
-trials = 100
+def get_expanded_path(path, db_paths):
+    expanded_path = [0]
+    for i in range(len(current_path) - 1):
+        current_room = current_path[i]
+        next_room = current_path[i + 1]
+        expanded_path += db_paths[current_room][next_room][1:]
+    return expanded_path
+
+
+def two_opt_swap(route, start, end):
+    new_route = route[:start]
+    temp = route[start:end+1]
+    temp.reverse()
+    new_route = new_route + temp + route[end+1:]
+    return new_route
+
+
+trials = 1
 greed = 1
 shortest_path = None
 
@@ -108,12 +125,23 @@ for trial in range(trials):
         current_room_id = nearest_neighbor_id
 
     # Expand path to full list of room ids to visit
-    expanded_path = [0]
-    for i in range(len(current_path) - 1):
-        current_room = current_path[i]
-        next_room = current_path[i + 1]
-        expanded_path += db_paths[current_room][next_room][1:]
-
+    expanded_path = get_expanded_path(current_path, db_paths)
+    expanded_length = len(expanded_path)
+    improved = True
+    while improved:
+        improved = False
+        path_length = len(current_path)
+        for i in range(1, path_length):
+            for j in range(i + 1, path_length + 1):
+                new_path = two_opt_swap(current_path, i, j)
+                new_expansion = get_expanded_path(new_path, db_paths)
+                new_length = len(new_expansion)
+                if new_length < expanded_length:
+                    current_path = new_path
+                    expanded_path = new_expansion
+                    expanded_length = new_length
+                    improved = True
+    print(current_path)
     if (not shortest_path
             or len(expanded_path) < len(shortest_path)):
         shortest_path = expanded_path
