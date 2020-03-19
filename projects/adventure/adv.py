@@ -16,8 +16,8 @@ world = World()
 # map_file = "maps/test_line.txt"
 # map_file = "maps/test_cross.txt"
 # map_file = "maps/test_loop.txt"
-map_file = "maps/test_loop_fork.txt"
-# map_file = "maps/main_maze.txt"
+# map_file = "maps/test_loop_fork.txt"
+map_file = "maps/main_maze.txt"
 
 # Loads the map into a dictionary
 room_graph = literal_eval(open(map_file, "r").read())
@@ -65,19 +65,47 @@ with shelve.open('db') as db:
     db_paths = db['paths']
 
 
-def get_nearest_neighbor(current_room_id, paths, visited, greed=1):
-    candidates = [[] for _ in range(len(paths))]
+def get_nearest_neighbor(rooms, current_room_id, paths, visited):
+    candidates = []
+    shortest_length = len(paths)
+
     for room_id in [_ for _ in paths if _ != current_room_id]:
         if room_id not in visited:
             length = len(paths[room_id])
-            candidates[length - 2].append(room_id)
+            if length <= shortest_length:
+                if length < shortest_length:
+                    candidates.clear()
+                shortest_length = length
+                candidates.append(room_id)
+
+    shortest = None
     chosen = []
-    index = 0
-    while len(chosen) < greed and index < len(candidates):
-        chosen = chosen + candidates[index]
-        index += 1
-    nearest_neighbor = random.choice(chosen)
-    return nearest_neighbor
+
+    for candidate in candidates:
+        candidate_visited = visited.copy()
+        candidate_room = rooms[candidate]
+        s = deque()
+        s.append(candidate_room)
+        path_size = 0
+        while len(s):
+            head = s.pop()
+            for ex in head.get_exits():
+                new_room = head.get_room_in_direction(ex)
+                if new_room.id not in candidate_visited:
+                    candidate_visited.add(new_room.id)
+                    s.append(new_room)
+            path_size += 1
+
+        if not shortest:
+            shortest = path_size
+            chosen.append(candidate)
+        elif path_size <= shortest:
+            if path_size < shortest:
+                shortest = path_size
+                chosen.clear()
+            chosen.append(candidate)
+
+    return random.choice(chosen)
 
 
 def add_directions_from_path(rooms, path, traversal):
@@ -107,19 +135,20 @@ def two_opt_swap(route, start, end):
     return new_route
 
 
-trials = 1
-greed = 1
+trials = 1000
 shortest_path = None
 
 for trial in range(trials):
-    # print(f"Starting trial {trial}...")
+    print(f"Starting trial {trial}...")
     current_room_id = world.starting_room.id
     current_path = [current_room_id]
     visited = {current_room_id}
 
     while len(visited) < len(room_graph):
-        nearest_neighbor_id = get_nearest_neighbor(
-            current_room_id, db_paths[current_room_id], visited, greed)
+        nearest_neighbor_id = get_nearest_neighbor(world.rooms,
+                                                   current_room_id,
+                                                   db_paths[current_room_id],
+                                                   visited)
         current_path.append(nearest_neighbor_id)
         visited.add(nearest_neighbor_id)
         current_room_id = nearest_neighbor_id
@@ -127,27 +156,28 @@ for trial in range(trials):
     # Expand path to full list of room ids to visit
     expanded_path = get_expanded_path(current_path, db_paths)
     expanded_length = len(expanded_path)
-    improved = True
-    while improved:
-        improved = False
-        path_length = len(current_path)
-        for i in range(1, path_length):
-            for j in range(i + 1, path_length + 1):
-                new_path = two_opt_swap(current_path, i, j)
-                new_expansion = get_expanded_path(new_path, db_paths)
-                new_length = len(new_expansion)
-                if new_length < expanded_length:
-                    current_path = new_path
-                    expanded_path = new_expansion
-                    expanded_length = new_length
-                    improved = True
-    print(current_path)
+    # improved = True
+    # while improved:
+    #     improved = False
+    #     path_length = len(current_path)
+    #     for i in range(1, path_length):
+    #         for j in range(i + 1, path_length + 1):
+    #             new_path = two_opt_swap(current_path, i, j)
+    #             new_expansion = get_expanded_path(new_path, db_paths)
+    #             new_length = len(new_expansion)
+    #             if new_length < expanded_length:
+    #                 current_path = new_path
+    #                 expanded_path = new_expansion
+    #                 expanded_length = new_length
+    #                 improved = True
+
     if (not shortest_path
             or len(expanded_path) < len(shortest_path)):
         shortest_path = expanded_path
 
 
 # Turn path into list of directions
+print(shortest_path)
 add_directions_from_path(world.rooms, shortest_path, traversal_path)
 # print(traversal_path)
 
