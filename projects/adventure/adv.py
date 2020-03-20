@@ -127,19 +127,10 @@ def get_expanded_path(path, db_paths):
     return expanded_path
 
 
-def two_opt_swap(route, start, end):
-    new_route = route[:start]
-    temp = route[start:end+1]
-    temp.reverse()
-    new_route = new_route + temp + route[end+1:]
-    return new_route
-
-
-trials = 1000
+trials = 10
 shortest_path = None
 
 for trial in range(trials):
-    print(f"Starting trial {trial}...")
     current_room_id = world.starting_room.id
     current_path = [current_room_id]
     visited = {current_room_id}
@@ -156,20 +147,6 @@ for trial in range(trials):
     # Expand path to full list of room ids to visit
     expanded_path = get_expanded_path(current_path, db_paths)
     expanded_length = len(expanded_path)
-    # improved = True
-    # while improved:
-    #     improved = False
-    #     path_length = len(current_path)
-    #     for i in range(1, path_length):
-    #         for j in range(i + 1, path_length + 1):
-    #             new_path = two_opt_swap(current_path, i, j)
-    #             new_expansion = get_expanded_path(new_path, db_paths)
-    #             new_length = len(new_expansion)
-    #             if new_length < expanded_length:
-    #                 current_path = new_path
-    #                 expanded_path = new_expansion
-    #                 expanded_length = new_length
-    #                 improved = True
 
     if (not shortest_path
             or len(expanded_path) < len(shortest_path)):
@@ -177,9 +154,7 @@ for trial in range(trials):
 
 
 # Turn path into list of directions
-print(shortest_path)
 add_directions_from_path(world.rooms, shortest_path, traversal_path)
-# print(traversal_path)
 
 # TRAVERSAL TEST
 visited_rooms = set()
